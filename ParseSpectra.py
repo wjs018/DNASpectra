@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 class Spectrum:
     """A class containing all the data from a single spectrum."""
 
-    def __init__(self, eth_gly, mM_NaCl, temperature, time = None):
+    def __init__(self, eth_gly, mM_NaCl, temperature, time=None):
         """The ethylene glycol, mM NaCl, and temperature need to be set in the
         call initializing the spectrum. Time is an optional parameter to be 
         used in time series experiments."""
@@ -101,94 +101,93 @@ class Experiment:
 
         else:
             print "No blank spectrum set!"
-    
+
     def get_abs_maxes(self):
         """Get the 260 nm absorbance maximum from each spectrum."""
-        
+
         abs_max_list = []
-        
+
         if len(self.abs_list) == 0:
             self.calc_abs()
-        
+
         if len(self.abs_list) == len(self.spectra_list):
-            
+
             lambdas = self.blank_spectrum.lambdas
-            
+
             ix = np.where((258 < lambdas) & (lambdas < 262))
-            
+
             for spec in self.abs_list:
-                
+
                 abs_max_list.append(np.max(spec.intensities[ix]))
-        
+
         return abs_max_list
-    
+
     def plot_melting(self):
         """Plots Absorbance vs. Temperature curve."""
-        
+
         if len(self.abs_list) == 0:
             self.calc_abs()
-        
+
         if len(self.abs_list) == len(self.spectra_list):
-            
+
             temps = self.get_temps()
             maxes = self.get_abs_maxes()
-            
+
             plt.plot(temps, maxes, 'o')
             plt.title(str(self.spectra_list[0].eth_gly) + "% Ethylene Glycol")
             plt.show()
-    
+
     def get_times(self):
         """Returns a list of times the spectra in the experiment were taken."""
-        
+
         if self.exp_type != 'time':
             print "Experiment is wrong type for this function."
             return None
-        
+
         time_list = []
-        
+
         for spec in self.spectra_list:
-            
+
             time_list.append(spec.time)
-            
+
         return time_list
-    
+
     def plot_time(self):
         """Plots absorption as a function of time."""
-        
+
         if len(self.abs_list) == 0:
             self.calc_abs()
-        
+
         if len(self.abs_list) == len(self.spectra_list):
-            
+
             times = self.get_times()
             maxes = self.get_abs_maxes()
-            
+
             plt.plot(times, maxes, 'o')
             plt.title(str(self.spectra_list[0].eth_gly) + "% Ethylene Glycol")
             plt.show()
 
 
-if __name__ == '__main__':
-    
-    #===========================================================================
-    # Change the line below if you want to specify a different directory.
-    #===========================================================================
-    source_dir = '/media/sf_M_DRIVE/DNA Spectra/20160513'
+def parse_folder(dir_path):
+    """Parse the DNA spectra in the given directory. Returns a dictionary of 
+    the Experiment objects discovered from the files in the directory."""
+
+    source_dir = dir_path
 
     for root, dirs, files in os.walk(source_dir):
 
         files = [os.path.join(root, f) for f in files if f.endswith('.txt')]
-    
+
     # Experiments distinguished according to ethylene glycol content
-    
+
     experiment_dict = {}
 
     for spectrum_file in files:
 
         # First, get the filename separate from the directory structure
-        
+
         os_test = os.path.join('test', 'path')
-        
+
         split_char = os_test[4]
 
         filename = spectrum_file.split(split_char)[-1]
@@ -198,20 +197,20 @@ if __name__ == '__main__':
 
         filename_parts = filename.split('_')
         chunks = len(filename_parts)
-        
+
         # Determine if this spectrum is a blank
-        
+
         blank_flag = False
-        
+
         if 'blank' in filename_parts:
 
             temperature = 'blank'
             blank_flag = True
 
         for i in range(1, chunks - 1):
-            
+
             # Get the ethylene glycol content
-            
+
             if filename_parts[i] == 'Eth' and filename_parts[i + 1] == 'Gly' and filename_parts[i - 1].isdigit():
                 eth_gly = float(filename_parts[i - 1])
 
@@ -221,86 +220,101 @@ if __name__ == '__main__':
                 mM_NaCl = float(filename_parts[i - 1])
 
         # Extract the temperature if it is not a blank
-        
+
         if not blank_flag:
             temperature_inds = re.search("[0-9]C", filename)
-            temperature = float(filename[temperature_inds.start() - 1:temperature_inds.end() - 1])
-        
+            temperature = float(
+                filename[temperature_inds.start() - 1:temperature_inds.end() - 1])
+
         # Actually read in the data from the text file (16 rows of header)
 
         data = np.loadtxt(spectrum_file, delimiter="\t", skiprows=16)
 
         lambdas = data[:, 0]
         intensities = data[:, 1]
-        
+
         # Save to a Spectrum object
 
         spectrum_obj = Spectrum(eth_gly, mM_NaCl, temperature)
         spectrum_obj.add_data(lambdas, intensities)
-        
+
         # Check whether this is a temperature or time series experiment
-        
+
         if not any('time' in s.lower() for s in filename_parts):
-            
+
             # This is a temperature series experiment
-            
+
             exp_time = None
             exp_type = 'temp'
             exp_key = str(eth_gly) + '_' + str(mM_NaCl) + '_' + exp_type
-    
+
         elif any('time' in s.lower() for s in filename_parts):
-            
+
             # This is a time series experiment, we need to extract the timestamp
             # unless it is a blank
-            
+
             if not blank_flag:
-            
+
                 time_str = filename_parts[-1]
                 time_parts = time_str.split('-')
-                
+
                 # We need to convert strings into ints for the time object
-                
+
                 for i in range(len(time_parts)):
                     time_parts[i] = int(time_parts[i])
-                
-                exp_short_time = dt.time(time_parts[0], time_parts[1], time_parts[2], time_parts[3])
+
+                exp_short_time = dt.time(
+                    time_parts[0], time_parts[1], time_parts[2], time_parts[3])
                 today_date = dt.date.today()
                 exp_time = dt.datetime.combine(today_date, exp_short_time)
-            
+
             exp_type = 'time'
             exp_key = str(eth_gly) + '_' + str(mM_NaCl) + '_' + exp_type
-        
+
         # Save to a Spectrum object
 
         spectrum_obj = Spectrum(eth_gly, mM_NaCl, temperature, time=exp_time)
         spectrum_obj.add_data(lambdas, intensities)
-            
+
         # Add the spectrum to an existing Experiment or create a new one
-            
+
         if exp_key in experiment_dict:
-            
+
             experiment_dict[exp_key].add_spectrum(spectrum_obj)
-        
+
         else:
-            
+
             if exp_time:
                 experiment_dict[exp_key] = Experiment('time')
             else:
                 experiment_dict[exp_key] = Experiment('temp')
-            
+
             experiment_dict[exp_key].add_spectrum(spectrum_obj)
-            
-    
+
+    # Return the dictionary of experiments
+
+    return experiment_dict
+
+
+if __name__ == '__main__':
+
+    #=========================================================================
+    # Change the line below if you want to specify a different directory.
+    #=========================================================================
+    source_dir = '/media/sf_M_DRIVE/DNA Spectra/20160513'
+
+    experiment_dict = parse_folder(source_dir)
+
     # Plot results depending on type of experiment
-    
+
     for key in experiment_dict:
-        
+
         exp = experiment_dict[key]
-        
+
         if exp.exp_type == 'temp':
-        
+
             exp.plot_melting()
-            
+
         else:
-            
+
             exp.plot_time()
