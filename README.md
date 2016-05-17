@@ -21,7 +21,7 @@ where
 
 For Temperature series experiments, the filename convention looks like this:
 
-`<text A>_<number 1>_Eth_Gly_<number 2>_mM_NaCl_<number 3>C_<timestamp>.txt`
+`<text A>_<number 1>_Eth_Gly_<number 2>_mM_NaCl_<number 3>C.txt`
 
 where
 

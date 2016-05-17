@@ -167,6 +167,31 @@ class Experiment:
             plt.title(str(self.spectra_list[0].eth_gly) + "% Ethylene Glycol")
             plt.show()
 
+    def save(self, output_file):
+        """Saves the results of the experiment. For time series, it will save a
+        csv file with two columns, time and absorbance. For temperature series,
+        it will save a csv with two columns, temperature and absorbance."""
+        
+        import csv
+        
+        outfile = open(output_file, 'wb')
+        writer = csv.writer(outfile)
+        
+        if self.exp_type == 'time':
+            
+            col1 = self.get_times()
+            col2 = self.get_abs_maxes()
+        
+        elif self.exp_type == 'temp':
+            
+            col1 = self.get_temps()
+            col2 = self.get_abs_maxes()
+        
+        for i in range(len(col1)):
+            
+            writer.writerow([col1[i], col2[i]])
+        
+        outfile.close()
 
 def parse_folder(dir_path):
     """Parse the DNA spectra in the given directory. Returns a dictionary of 
@@ -318,3 +343,5 @@ if __name__ == '__main__':
         else:
 
             exp.plot_time()
+        
+        exp.save(os.path.join(source_dir, key + '.csv'))
