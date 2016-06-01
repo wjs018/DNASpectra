@@ -366,8 +366,6 @@ def parse_folder(dir_path):
                     elif filename_parts[i+1].lower() == 'end':
                         ramp_stop = float(chunk[temp_str.start() - 1:temp_str.end() - 1])
                     elif filename_parts[i+1].lower() == 'min':
-                        print chunk
-                        print chunk[temp_str.start() - 2:temp_str.end() - 1]
                         ramp_grad = float(chunk[temp_str.start() - 2:temp_str.end() - 1])
             
             ramp_params = (ramp_start, ramp_stop, ramp_grad)
@@ -409,8 +407,8 @@ if __name__ == '__main__':
     experiment_dict = parse_folder(source_dir)
     
     for key in experiment_dict:
-        print str(len(experiment_dict[key].spectra_list)) + ' data spectra'
-        print str(len(experiment_dict[key].blank_list)) + ' blank spectra'
+        print str(len(experiment_dict[key].spectra_list)) + ' data spectra in ' + key
+        print str(len(experiment_dict[key].blank_list)) + ' blank spectra in ' + key
 
     # Plot results depending on type of experiment
 
