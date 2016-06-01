@@ -2,18 +2,8 @@
 absorption spectra for DNA (260 nm).
 
 A lot of the automation in this program is done through using filename
-conventions. Files should be named according to the following:
-
-For Temperature series experiments:
-
-<any text but time>_<number>_Eth_Gly_<number>_mM_NaCl_<number>C.txt
-
-For time series experiments:
-
-<any text containing time>_<number>_Eth_Gly_<number>_mM_NaCl_<number>C_<timestamp from spectrometer>.txt
-
-For a more detailed description of these, see the readme file.
-
+conventions. See README for complete documentation regarding filename 
+conventions.
 """
 
 import os
@@ -29,7 +19,7 @@ class Spectrum:
     def __init__(self, eth_gly, mM_NaCl, temperature, time=None):
         """The ethylene glycol, mM NaCl, and temperature need to be set in the
         call initializing the spectrum. Time is an optional parameter to be 
-        used in time series experiments."""
+        used in time series and ramp experiments."""
 
         self.eth_gly = eth_gly
         self.mM_NaCl = mM_NaCl
@@ -58,7 +48,7 @@ class Experiment:
         temperature series experiment, or 'ramp' for a temperature ramp
         experiment. If the exp_type is a ramp, then the parameter ramp must
         be specified. It is a tuple containing three floats (start temperature,
-        stop temperature, temp change per minute)."""
+        stop temperature, temperature change per minute)."""
 
         self.spectra_list = []
         self.abs_list = []
@@ -221,9 +211,10 @@ class Experiment:
             plt.show()
 
     def save(self, output_file):
-        """Saves the results of the experiment. For time series, it will save a
-        csv file with two columns, time and absorbance. For temperature series,
-        it will save a csv with two columns, temperature and absorbance."""
+        """Saves the results of the experiment. For time series and ramp 
+        experiments, it will save a csv file with two columns, time and 
+        absorbance. For temperature series, it will save a csv with two 
+        columns, temperature and absorbance."""
         
         import csv
         
