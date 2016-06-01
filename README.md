@@ -4,9 +4,9 @@ This is a piece of code written to quickly analyze absorbance spectra of DNA sam
 
 ## Filename Conventions
 
-There are two main types of experiments this program is made to handle: time series and temperature series. A time series experiment consists of setting a temperature on the spectrometer and measuring absorbance of your sample as a function of time. This basically measures the time it takes to heat up or cool down your sample. A temperature series experiment consists of changing the temperature of your sample, letting it equilibrate at the new temperature and then recording a spectrum. This allows for equilibrium measurements of absorbance rather than the kinetic measurements of a time series experiment.
+There are three main types of experiments this program is made to handle: time series, temperature series, and a temperature ramp. A time series experiment consists of setting a temperature on the spectrometer and measuring absorbance of your sample as a function of time. This basically measures the time it takes to heat up or cool down your sample. A temperature series experiment consists of changing the temperature of your sample, letting it equilibrate at the new temperature and then recording a spectrum. This allows for equilibrium measurements of absorbance rather than the kinetic measurements of a time series experiment. Finally, a temperature ramp experiment is one in which the temperature of your sample is changed over time at a steady rate.
 
-The two types of experiment have their own file naming conventions. For time series, the format looks like this:
+The three types of experiment have their own file naming conventions. For time series, the format looks like this:
 
 `<text A>_Time_<text B>_<number 1>_Eth_Gly_<number 2>_mM_NaCl_<number 3>C_<timestamp>.txt`
 
@@ -30,9 +30,25 @@ where
 * `<number 2>` is the salt (NaCl) concentration of the sample in mM
 * `<number 3>` is the temperature of the sample in Celcius
 
+Finally, for a temperature ramp experiment, the following convention should be used:
+
+`<text A>_Time_<text B>_<number 1>_Eth_Gly_<number 2>_mM_NaCl_<number 3>C_Start_<number 4>C_Stop_<number 5>C_Min_<timestamp>.txt`
+
+where
+
+* `<text A>` optional and can be any text you want so long as it doesn't conflict with any other markers
+* `<text B>` optional and can be any text you want so long as it doesn't conflict with any other markers
+* `<number 1>` is the percent by volume of Ethylene Glycol in the sample
+* `<number 2>` is the salt (NaCl) concentration of the sample in mM
+* `<number 3>` is the starting temperature of the sample in Celcius
+* `<number 4>` is the ending temperature of the sample in Celcius
+* `<number 5>` is the change in temperature per minute, must be positive
+* `<timestamp>` is the automatically generated timestamp from the spectrometer
+
 ## Dependencies
 
 * Python 2.x
+* numpy
 
 ## Contact
 
