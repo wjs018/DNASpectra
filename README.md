@@ -32,7 +32,7 @@ where
 
 Finally, for a temperature ramp experiment, the following convention should be used:
 
-`<text A>_Time_<text B>_<number 1>_Eth_Gly_<number 2>_mM_NaCl_<number 3>C_Start_<number 4>C_Stop_<number 5>C_Min_<timestamp>.txt`
+`<text A>_Time_<text B>_<number 1>_Eth_Gly_<number 2>_mM_NaCl_<number 3>C_Start_<number 4>C_End_<number 5>C_Min_<timestamp>.txt`
 
 where
 

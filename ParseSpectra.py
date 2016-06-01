@@ -128,7 +128,7 @@ class Experiment:
 
         if len(self.abs_list) == len(self.spectra_list):
 
-            lambdas = self.blank_spectrum.lambdas
+            lambdas = self.blank_list[0].lambdas
 
             ix = np.where((258 < lambdas) & (lambdas < 262))
 
@@ -289,7 +289,7 @@ def parse_folder(dir_path):
 
         blank_flag = False
 
-        if 'blank' in filename_parts:
+        if any('blank' in s.lower() for s in filename_parts):
 
             temperature = 'blank'
             blank_flag = True
@@ -308,7 +308,7 @@ def parse_folder(dir_path):
 
         # Extract the temperature if it is not a blank
 
-        if exp_type in ['temp', 'time']:
+        if exp_type != 'ramp' or blank_flag == False:
             temperature_inds = re.search("[0-9]C", filename)
             temperature = float(filename[temperature_inds.start() - 1:temperature_inds.end() - 1])
 
@@ -363,10 +363,12 @@ def parse_folder(dir_path):
                     
                     if filename_parts[i+1].lower() == 'start':
                         ramp_start = float(chunk[temp_str.start() - 1:temp_str.end() - 1])
-                    elif filename_parts[i+1].lower() == 'stop':
+                    elif filename_parts[i+1].lower() == 'end':
                         ramp_stop = float(chunk[temp_str.start() - 1:temp_str.end() - 1])
                     elif filename_parts[i+1].lower() == 'min':
-                        ramp_grad = float(chunk[temp_str.start() - 1:temp_str.end() - 1])
+                        print chunk
+                        print chunk[temp_str.start() - 2:temp_str.end() - 1]
+                        ramp_grad = float(chunk[temp_str.start() - 2:temp_str.end() - 1])
             
             ramp_params = (ramp_start, ramp_stop, ramp_grad)
             
@@ -402,9 +404,13 @@ if __name__ == '__main__':
     #=========================================================================
     # Change the line below if you want to specify a different directory.
     #=========================================================================
-    source_dir = '/media/sf_M_DRIVE/DNA Spectra/20160513'
+    source_dir = '/media/sf_M_DRIVE/DNA Spectra/20160531'
 
     experiment_dict = parse_folder(source_dir)
+    
+    for key in experiment_dict:
+        print str(len(experiment_dict[key].spectra_list)) + ' data spectra'
+        print str(len(experiment_dict[key].blank_list)) + ' blank spectra'
 
     # Plot results depending on type of experiment
 
