@@ -52,21 +52,29 @@ class Spectrum:
 class Experiment:
     """A class containing all the spectra from a single experiment."""
 
-    def __init__(self, exp_type):
+    def __init__(self, exp_type, ramp=None):
         """Define the experiment type when initializing an Experiment. Can
-        either be 'time' for a time series measurement, or 'temp' for a 
-        temperature series experiment."""
+        either be 'time' for a time series measurement, 'temp' for a 
+        temperature series experiment, or 'ramp' for a temperature ramp
+        experiment. If the exp_type is a ramp, then the parameter ramp must
+        be specified. It is a tuple containing three floats (start temperature,
+        stop temperature, temp change per minute)."""
 
         self.spectra_list = []
         self.abs_list = []
-        self.blank_spectrum = False
+        self.blank_list = []
         self.exp_type = exp_type
+        
+        if ramp:
+            self.ramp_start = ramp[0]
+            self.ramp_stop = ramp[1]
+            self.ramp_grad = ramp[2]
 
     def add_spectrum(self, spectrum):
         """Add one more spectrum to the experiment."""
 
         if spectrum.blank == True:
-            self.blank_spectrum = spectrum
+            self.blank_list.append(spectrum)
         else:
             self.spectra_list.append(spectrum)
 
@@ -74,22 +82,30 @@ class Experiment:
         """Return the list of temperatures for the spectra in the Experiment."""
 
         temp_list = []
-
-        for spec in self.spectra_list:
-
-            temp_list.append(spec.temperature)
+        
+        if self.exp_type == 'temp':
+            for spec in self.spectra_list:
+                temp_list.append(spec.temperature)
 
         return temp_list
 
     def calc_abs(self):
         """Calculate the absorbance spectra."""
 
-        if self.blank_spectrum:
+        if len(self.blank_list) == len(self.spectra_list):
+            
+            # First, sort spectra and blanks by time to make sure they are in order
+            
+            self.sort_spectra()
+            self.sort_spectra(type='blank')
 
-            for spec in self.spectra_list:
+            for i in range(len(self.spectra_list)):
+                
+                spec = self.spectra_list[i]
+                blank = self.blank_list[i]
 
                 trans = np.divide(
-                    spec.intensities, self.blank_spectrum.intensities)
+                    spec.intensities, blank.intensities)
                 trans = trans.clip(min=1e-10)
 
                 absorb = - np.log10(trans)
@@ -100,7 +116,7 @@ class Experiment:
                 self.abs_list.append(abs_spec)
 
         else:
-            print "No blank spectrum set!"
+            print "Number of spectra and blanks do not match!"
 
     def get_abs_maxes(self):
         """Get the 260 nm absorbance maximum from each spectrum."""
@@ -137,20 +153,57 @@ class Experiment:
             plt.title(str(self.spectra_list[0].eth_gly) + "% Ethylene Glycol")
             plt.show()
 
-    def get_times(self):
-        """Returns a list of times the spectra in the experiment were taken."""
+    def get_times(self, type=None):
+        """Returns a list of times the spectra in the experiment were taken.
+        To get a list of times for the blank spectra, specify type='blank'."""
 
-        if self.exp_type != 'time':
+        if self.exp_type == 'temp':
             print "Experiment is wrong type for this function."
             return None
 
         time_list = []
-
-        for spec in self.spectra_list:
-
-            time_list.append(spec.time)
+        
+        if not type:
+            for spec in self.spectra_list:
+    
+                time_list.append(spec.time)
+                
+        elif type == 'blank':
+            for spec in self.blank_list:
+                
+                time_list.append(spec.time)
 
         return time_list
+    
+    def sort_spectra(self, type=None):
+        """Sorts the spectra according to timestamp. Specify type='blank' 
+        to sort blank spectra."""
+        
+        if self.exp_type == 'temp':
+            print "Experiment is wrong type for this function."
+            return None
+        
+        time_list = self.get_times(type=type)
+        time_list.sort()
+        
+        if not type:
+            spec_list = self.spectra_list
+        else:
+            spec_list = self.blank_list
+        
+        sorted_spec_list = []
+        
+        for timestamp in time_list:
+            for spec in spec_list:
+                
+                if timestamp == spec.time:
+                    sorted_spec_list.append(spec)
+                    break
+        
+        if not type:
+            self.spectra_list = sorted_spec_list
+        else:
+            self.blank_list = sorted_spec_list
 
     def plot_time(self):
         """Plots absorption as a function of time."""
@@ -177,7 +230,7 @@ class Experiment:
         outfile = open(output_file, 'wb')
         writer = csv.writer(outfile)
         
-        if self.exp_type == 'time':
+        if self.exp_type in ['time', 'ramp']:
             
             col1 = self.get_times()
             col2 = self.get_abs_maxes()
@@ -222,6 +275,15 @@ def parse_folder(dir_path):
 
         filename_parts = filename.split('_')
         chunks = len(filename_parts)
+        
+        # Determine experiment type
+        
+        if any('time' in s.lower() for s in filename_parts):
+            exp_type = 'time'
+        elif any('temp' in s.lower() for s in filename_parts):
+            exp_type = 'temp'
+        elif any('ramp' in s.lower() for s in filename_parts):
+            exp_type = 'ramp'
 
         # Determine if this spectrum is a blank
 
@@ -246,10 +308,9 @@ def parse_folder(dir_path):
 
         # Extract the temperature if it is not a blank
 
-        if not blank_flag:
+        if exp_type in ['temp', 'time']:
             temperature_inds = re.search("[0-9]C", filename)
-            temperature = float(
-                filename[temperature_inds.start() - 1:temperature_inds.end() - 1])
+            temperature = float(filename[temperature_inds.start() - 1:temperature_inds.end() - 1])
 
         # Actually read in the data from the text file (16 rows of header)
 
@@ -265,36 +326,54 @@ def parse_folder(dir_path):
 
         # Check whether this is a temperature or time series experiment
 
-        if not any('time' in s.lower() for s in filename_parts):
+        if exp_type == 'temp':
 
-            # This is a temperature series experiment
+            # This is a temperature experiment
 
             exp_time = None
-            exp_type = 'temp'
-            exp_key = str(eth_gly) + '_' + str(mM_NaCl) + '_' + exp_type
 
-        elif any('time' in s.lower() for s in filename_parts):
+        elif exp_type in ['time', 'ramp']:
 
             # This is a time series experiment, we need to extract the timestamp
-            # unless it is a blank
 
-            if not blank_flag:
+            time_str = filename_parts[-1]
+            time_parts = time_str.split('-')
 
-                time_str = filename_parts[-1]
-                time_parts = time_str.split('-')
+            # We need to convert strings into ints for the time object
 
-                # We need to convert strings into ints for the time object
+            for i in range(len(time_parts)):
+                time_parts[i] = int(time_parts[i])
 
-                for i in range(len(time_parts)):
-                    time_parts[i] = int(time_parts[i])
-
-                exp_short_time = dt.time(
-                    time_parts[0], time_parts[1], time_parts[2], time_parts[3])
-                today_date = dt.date.today()
-                exp_time = dt.datetime.combine(today_date, exp_short_time)
-
-            exp_type = 'time'
-            exp_key = str(eth_gly) + '_' + str(mM_NaCl) + '_' + exp_type
+            exp_short_time = dt.time(
+                time_parts[0], time_parts[1], time_parts[2], time_parts[3])
+            today_date = dt.date.today()
+            exp_time = dt.datetime.combine(today_date, exp_short_time)
+        
+        if exp_type == 'ramp':
+            
+            # Need to get the ramp parameters
+            
+            for i in range(chunks):
+                
+                chunk = filename_parts[i]
+                
+                temp_str = re.search("[0-9]C", chunk)
+                
+                if temp_str:
+                    
+                    if filename_parts[i+1].lower() == 'start':
+                        ramp_start = float(chunk[temp_str.start() - 1:temp_str.end() - 1])
+                    elif filename_parts[i+1].lower() == 'stop':
+                        ramp_stop = float(chunk[temp_str.start() - 1:temp_str.end() - 1])
+                    elif filename_parts[i+1].lower() == 'min':
+                        ramp_grad = float(chunk[temp_str.start() - 1:temp_str.end() - 1])
+            
+            ramp_params = (ramp_start, ramp_stop, ramp_grad)
+            
+        else:
+            ramp_params = None
+        
+        exp_key = str(eth_gly) + '_' + str(mM_NaCl) + '_' + exp_type
 
         # Save to a Spectrum object
 
@@ -309,10 +388,7 @@ def parse_folder(dir_path):
 
         else:
 
-            if exp_time:
-                experiment_dict[exp_key] = Experiment('time')
-            else:
-                experiment_dict[exp_key] = Experiment('temp')
+            experiment_dict[exp_key] = Experiment(exp_type = exp_type, ramp = ramp_params)
 
             experiment_dict[exp_key].add_spectrum(spectrum_obj)
 
